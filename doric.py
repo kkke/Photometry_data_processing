@@ -114,8 +114,8 @@ def extract_data_Ch4_ThreeSeries(folder, file_name):
 		raw_reference = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'AIN04xAOUT01-LockIn','Values'])[0]
 		raw_signal    = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'AIN04xAOUT02-LockIn','Values'])[0]
 		# Load processed data
-		signal        = h5read(folder + file_name + '_DFF1.doric',['DataProcessed','FPConsole','DFFSignals',ser,'AIN04xAOUT02-LockIn','Values'])[0]
-		time          = h5read(folder + file_name + '_DFF1.doric',['DataProcessed','FPConsole','DFFSignals',ser,'AIN04xAOUT02-LockIn','Time'])[0]
+		signal        = h5read(folder + file_name + '_DFF1.doric',['DataProcessed','FPConsole','DFFSignals1',ser,'AIN04xAOUT02-LockIn','Values'])[0]
+		time          = h5read(folder + file_name + '_DFF1.doric',['DataProcessed','FPConsole','DFFSignals1',ser,'AIN04xAOUT02-LockIn','Time'])[0]
 
 		data_series = {'infusion': infusion, 'front': front, 'back': back, 'leverInsertion': leverInsertion, 'leverRetraction': leverRetraction, 'raw_reference': raw_reference,
 					'raw_signal': raw_signal, 'signal': signal, 'time': time}
