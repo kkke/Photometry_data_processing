@@ -8,6 +8,7 @@ Created on Thu Feb 17 08:52:32 2022
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 def ish5dataset(item):
 	return isinstance(item, h5py.Dataset)
@@ -161,6 +162,38 @@ def extract_data_Ch4_ThreeSeries(folder, file_name):
 				all_data[key] = np.concatenate((all_data[key], data[i][key]))
 	return data, all_data
 
+def extract_data_csv_ThreeSeries(folder, file_name):
+	data =[]
+	series = ['Series0001', 'Series0002', 'Series0003']
+	for ser in series:
+		dio01 = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'DigitalIO','DIO01'])[0]
+		dio02 = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'DigitalIO','DIO02'])[0]
+		dio03 = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'DigitalIO','DIO03'])[0]
+		dio04 = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'DigitalIO','DIO04'])[0]
+		dio_time = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'DigitalIO','Time'])[0]
+		infusion = find_event(dio02, dio_time)
+		front    = find_event(dio03, dio_time)
+		back     = find_event(dio04, dio_time)
+		leverRetraction, leverInsertion = detect_edges(dio01, dio_time)
+		# Load from Channel 2: AOUT01 is reference, AOUT02 is signal
+		raw_reference = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'AIN02xAOUT01-LockIn','Values'])[0]
+		raw_signal    = h5read(folder + file_name + '.doric',['DataAcquisition','FPConsole','Signals',ser,'AIN02xAOUT02-LockIn','Values'])[0]
+		# Load processed data
+		df        = pd.read_csv(folder + 'DFF' + ser + '_0000.csv')
+		time      = df['Time'].values
+		signal    = df['Values'].values
+
+		data_series = {'infusion': infusion, 'front': front, 'back': back, 'leverInsertion': leverInsertion, 'leverRetraction': leverRetraction, 'raw_reference': raw_reference,
+					'raw_signal': raw_signal, 'signal': signal, 'time': time}
+		data.append(data_series)
+	all_data = []
+	for i in range(len(data)):
+		if i == 0:
+			all_data = data[i]
+		else:
+			for key in data[i]:
+				all_data[key] = np.concatenate((all_data[key], data[i][key]))
+	return data, all_data
 
 def find_event(signal, time):
     state = np.where(signal == 0)[0] # Med associates: 1 means Off, and 0 means On; Here 0 means there is something happing
@@ -200,26 +233,26 @@ def psth_fb(data, time, event, pre, post, title_name):
         else:
             psth_time[:, i] = time[index[0:sample_size]] -  event[i]
             psth_signal[:,i] = data[index[0:sample_size]]
-    plt.figure()
-    plt.subplot(2,1,1)
-    plt.plot(np.mean(psth_time, 1), np.mean(psth_signal, 1), 'k')
+    fig = plt.figure()
+    ax1 = fig.add_subplot(211)
+    ax1.plot(np.mean(psth_time, 1), np.mean(psth_signal, 1), 'k')
     x = np.mean(psth_time, 1)
     y = np.mean(psth_signal, 1)
     e = np.std(psth_signal, axis=1)/np.sqrt(psth_signal.shape[1])
-    plt.fill_between(x, y-e, y+e)
+    ax1.fill_between(x, y-e, y+e)
     plt.xlabel('Time (s)')
     plt.ylabel(r'Z $\Delta$F/F')
     plt.xlim([np.min(np.mean(psth_time, 1)), np.max(np.mean(psth_time, 1))])
     # ylim([-0.1, 0.1])
     plt.ylim([-1.5, 1.5])
-    plt.tick_params(direction='out', length=5)
+    ax1.tick_params(direction='out', length=5)
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
     plt.subplots_adjust(hspace=0.5)
     plt.title(title_name)
 
-    plt.subplot(2, 1, 2)
-    plt.imshow(psth_signal.T, aspect='auto', cmap='jet', extent=[np.min(np.mean(psth_time, 1)), np.max(np.mean(psth_time, 1)), 0,len(event)])
+    ax2 = fig.add_subplot(212)
+    ax2.imshow(psth_signal.T, aspect='auto', cmap='jet', extent=[np.min(np.mean(psth_time, 1)), np.max(np.mean(psth_time, 1)), 0,len(event)])
     # colorbar
     plt.xlabel('Time (s)')
     plt.ylabel('Trials')
@@ -228,4 +261,4 @@ def psth_fb(data, time, event, pre, post, title_name):
     plt.yticks(fontsize=12)
     plt.subplots_adjust(hspace=0.5)
     plt.show()
-    return psth_time, psth_signal
+    return psth_time, psth_signal, fig
